@@ -61,24 +61,25 @@ function(_setup_obs_studio)
     set(_is_fresh --fresh)
   endif()
 
+  # OBS 30.1.2 only writes libobsConfig.cmake on the modern cmake path
+  # (OBS_CMAKE_VERSION >= 3.0.0). 2.0.0 is cmake/Modules (legacy): PRE_BUILD
+  # CMP0175 noise and no Config package for find_package(libobs).
+  set(_cmake_version "3.0.0")
+  set(_cmake_extra
+      -DENABLE_SCRIPTING=OFF
+      -DCMAKE_POLICY_DEFAULT_CMP0175=OLD
+      -Wno-dev)
+
   if(OS_WINDOWS)
     set(_cmake_generator "${CMAKE_GENERATOR}")
     set(_cmake_arch "-A ${arch}")
-    # OBS 30.1.2 uses ENABLE_SCRIPTING (not CMAKE_ENABLE_SCRIPTING). CMake 4.2
-    # rejects add_custom_command(OUTPUT ... PRE_BUILD) unless CMP0175 is OLD.
-    set(_cmake_extra
-        -DENABLE_SCRIPTING=OFF
-        -DCMAKE_POLICY_DEFAULT_CMP0175=OLD
-        -Wno-dev)
     if(CMAKE_SYSTEM_VERSION)
       list(APPEND _cmake_extra "-DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}")
     endif()
-    set(_cmake_version "2.0.0")
   elseif(OS_MACOS)
     set(_cmake_generator "Xcode")
     set(_cmake_arch "-DCMAKE_OSX_ARCHITECTURES:STRING='arm64;x86_64'")
-    set(_cmake_extra "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
-    set(_cmake_version "3.0.0")
+    list(APPEND _cmake_extra "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
   endif()
 
   message(STATUS "Configure ${label} (${arch})")
@@ -254,7 +255,20 @@ function(_check_dependencies)
 
   _setup_obs_studio()
 
-  list(INSERT CMAKE_PREFIX_PATH 0 "${dependencies_dir}")
+  # Install prefix plus the nested OBS *build* tree (same layout local-obs.cmake
+  # uses). Config files are generated in the build dir even if a component
+  # install is incomplete.
+  set(_obs_build "${dependencies_dir}/${_obs_destination}/build_${arch}")
+  list(INSERT CMAKE_PREFIX_PATH 0 "${dependencies_dir}" "${_obs_build}")
+  foreach(_extra_prefix IN ITEMS
+          "${_obs_build}/libobs"
+          "${_obs_build}/UI/obs-frontend-api"
+          "${_obs_build}/frontend/api"
+          "${dependencies_dir}/cmake")
+    if(EXISTS "${_extra_prefix}")
+      list(INSERT CMAKE_PREFIX_PATH 0 "${_extra_prefix}")
+    endif()
+  endforeach()
   list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
   set(CMAKE_PREFIX_PATH
       "${CMAKE_PREFIX_PATH}"
@@ -262,8 +276,9 @@ function(_check_dependencies)
 
   unset(_libobs_config)
   foreach(_candidate IN ITEMS
-          "${dependencies_dir}/lib/cmake/libobs/libobsConfig.cmake"
           "${dependencies_dir}/cmake/libobs/libobsConfig.cmake"
+          "${dependencies_dir}/lib/cmake/libobs/libobsConfig.cmake"
+          "${_obs_build}/libobs/libobsConfig.cmake"
           "${dependencies_dir}/libobs/libobsConfig.cmake")
     if(EXISTS "${_candidate}")
       set(_libobs_config "${_candidate}")
@@ -294,5 +309,17 @@ function(_check_dependencies)
     set(obs-frontend-api_DIR
         "${_obs_api_dir}"
         CACHE PATH "obs-frontend-api CMake package" FORCE)
+  else()
+    foreach(_api_candidate IN ITEMS
+            "${_obs_build}/UI/obs-frontend-api"
+            "${_obs_build}/frontend/api"
+            "${dependencies_dir}/cmake/obs-frontend-api")
+      if(EXISTS "${_api_candidate}/obs-frontend-apiConfig.cmake")
+        set(obs-frontend-api_DIR
+            "${_api_candidate}"
+            CACHE PATH "obs-frontend-api CMake package" FORCE)
+        break()
+      endif()
+    endforeach()
   endif()
 endfunction()

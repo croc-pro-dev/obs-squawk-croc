@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.5 — 2026-08-25
+
+Windows CI: nested OBS 30.1.2 is configured with `OBS_CMAKE_VERSION=3.0.0` so `libobsConfig.cmake` is actually generated (`2.0.0` was the legacy `cmake/Modules` path). Plugin prefix includes the OBS build tree. macOS CI: `macos-15` + Xcode 16.4 (Xcode 15.2 is gone on GitHub runners).
+
 ## 0.1.4 — 2026-08-25
 
 CI: after OBS 30.1.2 builds, `find_package(libobs)` failed because CMake 4.2 dropped the `Development` install component when a second `--component` was passed, and `CMAKE_PREFIX_PATH` was stored as a single `PATH`. Install Development and Windows libs separately; keep the prefix as a list; set `libobs_DIR`.
