@@ -2,9 +2,13 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.1 — 2026-08-25
+
+First GitHub Actions release after workflows were enabled on the fork. Same plugin as 0.1.0; this tag exists so CI can publish the Windows (and other) artifacts.
+
 ## 0.1.0 — 2026-08-25
 
-First GitHub release of this fork.
+First tagged snapshot of this fork. No GitHub Release assets were published from this tag (Actions was still disabled).
 
 ### Build
 
