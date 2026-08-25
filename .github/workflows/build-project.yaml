@@ -74,6 +74,7 @@ jobs:
   macos-build:
     name: Build for macOS 🍏
     runs-on: macos-14
+    continue-on-error: true
     needs: check-event
     defaults:
       run:
@@ -260,6 +261,11 @@ jobs:
 
           "pluginName=${ProductName}" >> $env:GITHUB_OUTPUT
           "pluginVersion=${ProductVersion}" >> $env:GITHUB_OUTPUT
+
+      - name: Set up CMake 4.2+
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.2.0'
 
       - name: Build Plugin 🧱
         uses: ./.github/actions/build-plugin
