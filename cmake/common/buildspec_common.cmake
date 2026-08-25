@@ -95,11 +95,8 @@ function(_setup_obs_studio)
     set(_obs_cc "${dependencies_dir}/${_obs_destination}/cmake/macos/compilerconfig.cmake")
     if(EXISTS "${_obs_cc}")
       file(READ "${_obs_cc}" _obs_cc_src)
-      string(REGEX REPLACE
-             "string\\(REGEX MATCH[^\n]*CMAKE_OSX_SYSROOT\\)\r?\n[ \t]*set\\(_obs_macos_current_sdk \\$\\{CMAKE_MATCH_1\\}\\)"
-             "set(_obs_macos_current_sdk 15.5)"
-             _obs_cc_src
-             "${_obs_cc_src}")
+      string(REPLACE "if(_obs_macos_current_sdk VERSION_LESS _obs_macos_minimum_sdk)"
+             "if(FALSE)" _obs_cc_src "${_obs_cc_src}")
       file(WRITE "${_obs_cc}" "${_obs_cc_src}")
     endif()
   endif()

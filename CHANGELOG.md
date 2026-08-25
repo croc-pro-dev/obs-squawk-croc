@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.9 — 2026-08-25
+
+Windows CI: libobs/Qt6 configure now works; FetchContent then 404s on the withdrawn `libarchive-v3.7.4-amd64.zip`. Build libarchive 3.7.4 from the official source tarball. macOS CI: OBS 30.1.2 still fatals on empty SDK version with Xcode 16; skip that version check.
+
 ## 0.1.8 — 2026-08-25
 
 Windows CI: `find_package(libobs)` and `w32-pthreads` succeed; `find_package(Qt6)` fails because `CMAKE_PREFIX_PATH` never left `_check_dependencies()`. Set `Qt6_DIR` and export the prefix to parent scope. macOS CI: OBS 30.1.2 rejects Xcode 16’s `MacOSX.sdk` path; pass the real SDK and skip that filename regex.

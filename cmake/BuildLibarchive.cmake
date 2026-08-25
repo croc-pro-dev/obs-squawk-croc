@@ -15,38 +15,48 @@ if(WIN32)
   FetchContent_Declare(openssl URL "https://wiki.overbyte.eu/arch/openssl-1.1.1w-win64.zip")
   FetchContent_MakeAvailable(openssl)
 
-  set(LIBARCHIVE_VERSION 3.7.4)
-  set(LIBARCHIVE_URL
-      "https://github.com/libarchive/libarchive/releases/download/v${LIBARCHIVE_VERSION}/libarchive-v${LIBARCHIVE_VERSION}-amd64.zip"
-  )
+  # Official Windows amd64 zips were withdrawn (404). Build from the source tarball.
+  set(ENABLE_TEST
+      OFF
+      CACHE BOOL "" FORCE)
+  set(ENABLE_TAR
+      OFF
+      CACHE BOOL "" FORCE)
+  set(ENABLE_CPIO
+      OFF
+      CACHE BOOL "" FORCE)
+  set(ENABLE_CAT
+      OFF
+      CACHE BOOL "" FORCE)
+  set(ENABLE_WERROR
+      OFF
+      CACHE BOOL "" FORCE)
+  set(ENABLE_INSTALL
+      OFF
+      CACHE BOOL "" FORCE)
+  set(BUILD_SHARED_LIBS
+      ON
+      CACHE BOOL "" FORCE)
 
   include(FetchContent)
-  FetchContent_Declare(libarchive-build URL ${LIBARCHIVE_URL})
-  FetchContent_MakeAvailable(libarchive-build)
+  FetchContent_Declare(
+    libarchive
+    URL "https://github.com/libarchive/libarchive/releases/download/v3.7.4/libarchive-3.7.4.tar.gz")
+  FetchContent_MakeAvailable(libarchive)
 
-  # create an INTERFACE library to link against
   add_library(libarchive INTERFACE)
-  add_dependencies(libarchive libarchive-build)
-  target_include_directories(libarchive INTERFACE ${libarchive-build_SOURCE_DIR}/include)
-
-  add_library(libarchive::libarchive SHARED IMPORTED)
-  set_property(
-    TARGET libarchive::libarchive
-    PROPERTY IMPORTED_LOCATION
-             ${libarchive-build_SOURCE_DIR}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}archive${CMAKE_SHARED_LIBRARY_SUFFIX})
-  add_dependencies(libarchive::libarchive libarchive-build)
-
-  set_property(
-    TARGET libarchive::libarchive
-    PROPERTY IMPORTED_IMPLIB
-             ${libarchive-build_SOURCE_DIR}/lib/${CMAKE_IMPORT_LIBRARY_PREFIX}archive${CMAKE_IMPORT_LIBRARY_SUFFIX})
-
-  install(FILES ${libarchive-build_SOURCE_DIR}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive${CMAKE_SHARED_LIBRARY_SUFFIX}
-          DESTINATION ${CMAKE_SOURCE_DIR}/release/$<CONFIG>/obs-plugins/64bit)
-  install(FILES ${openssl_SOURCE_DIR}/libcrypto-1_1-x64${CMAKE_SHARED_LIBRARY_SUFFIX}
-          DESTINATION ${CMAKE_SOURCE_DIR}/release/$<CONFIG>/obs-plugins/64bit)
-
-  target_link_libraries(libarchive INTERFACE libarchive::libarchive libbzip2)
+  if(TARGET archive)
+    target_link_libraries(libarchive INTERFACE archive libbzip2)
+    install(FILES $<TARGET_FILE:archive> DESTINATION ${CMAKE_SOURCE_DIR}/release/$<CONFIG>/obs-plugins/64bit)
+  elseif(TARGET archive_static)
+    target_link_libraries(libarchive INTERFACE archive_static libbzip2)
+  else()
+    message(FATAL_ERROR "libarchive CMake project did not create archive or archive_static")
+  endif()
+  if(EXISTS "${openssl_SOURCE_DIR}/libcrypto-1_1-x64${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    install(FILES ${openssl_SOURCE_DIR}/libcrypto-1_1-x64${CMAKE_SHARED_LIBRARY_SUFFIX}
+            DESTINATION ${CMAKE_SOURCE_DIR}/release/$<CONFIG>/obs-plugins/64bit)
+  endif()
 else()
   if(APPLE)
     # Homebrew ships libarchive keg only, include dirs have to be set manually
