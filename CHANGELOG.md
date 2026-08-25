@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.7 — 2026-08-25
+
+macOS CI: Homebrew ccache 4.11+ removed `run_second_cpp`. Setting that option aborted the job under zsh `ERR_EXIT`. Ignore unknown ccache config keys.
+
 ## 0.1.6 — 2026-08-25
 
 Windows CI: `find_package(libobs)` now finds `libobsConfig.cmake`, but that file `find_dependency(w32-pthreads)` and CMake 4.2 does not search OBS’s flat `${prefix}/cmake/` layout. Set `w32-pthreads_DIR` next to `libobs_DIR`.
