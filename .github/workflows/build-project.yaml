@@ -267,6 +267,9 @@ jobs:
         with:
           cmake-version: '4.2.0'
 
+      - name: Show CMake
+        run: cmake --version
+
       - name: Build Plugin 🧱
         uses: ./.github/actions/build-plugin
         with:

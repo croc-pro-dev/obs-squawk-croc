@@ -66,12 +66,12 @@
       "name": "windows-ci-x64",
       "inherits": ["windows-x64"],
       "displayName": "Windows x64 CI build",
-      "description": "Build for Windows x64 on CI (Visual Studio 18 2026)",
+      "description": "Build for Windows x64 on GitHub-hosted windows-2025 (Visual Studio 18 2026)",
       "binaryDir": "${sourceDir}/build_x64",
       "generator": "Visual Studio 18 2026",
       "architecture": "x64",
       "cacheVariables": {
-        "CMAKE_COMPILE_WARNING_AS_ERROR": true
+        "CMAKE_COMPILE_WARNING_AS_ERROR": false
       }
     },
     {

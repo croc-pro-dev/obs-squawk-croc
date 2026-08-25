@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.3 — 2026-08-25
+
+Windows GitHub Actions stays on **Visual Studio 18 2026** (`windows-2025`). OBS 30.1.2 is configured with `ENABLE_SCRIPTING=OFF` and CMake policy CMP0175 OLD so CMake 4.2 can generate that tree. Compiler warnings are not fatal on CI (`CMAKE_COMPILE_WARNING_AS_ERROR` off).
+
 ## 0.1.2 — 2026-08-25
 
 CI: install CMake 4.2+ on the Windows runner so the Visual Studio 18 2026 generator works. macOS is `continue-on-error` so a missing Xcode 15.2 image does not block the GitHub Release.
