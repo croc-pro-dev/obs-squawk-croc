@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.11 — 2026-08-25
+
+macOS CI: `fromJSON(steps.codesign.outputs.haveNotarizationUser)` is empty when signing secrets are unset (the notarization step is skipped). Treat missing outputs as `false`.
+
 ## 0.1.10 — 2026-08-25
 
 Windows CI: CMake 4.2 refuses libarchive 3.7.4 (`cmake_minimum_required` 2.8.12). Set `CMAKE_POLICY_VERSION_MINIMUM=3.5`.
