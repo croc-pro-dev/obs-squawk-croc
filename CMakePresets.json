@@ -40,7 +40,8 @@
       "description": "Build for macOS 11.0+ (Universal binary) for CI",
       "generator": "Xcode",
       "cacheVariables": {
-        "CMAKE_COMPILE_WARNING_AS_ERROR": false
+        "CMAKE_COMPILE_WARNING_AS_ERROR": false,
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
       }
     },
     {
@@ -71,7 +72,8 @@
       "generator": "Visual Studio 18 2026",
       "architecture": "x64",
       "cacheVariables": {
-        "CMAKE_COMPILE_WARNING_AS_ERROR": false
+        "CMAKE_COMPILE_WARNING_AS_ERROR": false,
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
       }
     },
     {

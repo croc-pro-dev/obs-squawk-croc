@@ -39,6 +39,9 @@ if(WIN32)
       CACHE BOOL "" FORCE)
 
   include(FetchContent)
+  set(CMAKE_POLICY_VERSION_MINIMUM
+      3.5
+      CACHE STRING "" FORCE)
   FetchContent_Declare(
     libarchive
     URL "https://github.com/libarchive/libarchive/releases/download/v3.7.4/libarchive-3.7.4.tar.gz")

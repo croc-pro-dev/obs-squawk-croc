@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.16...3.26)
 
+# CMake 4.x dropped support for cmake_minimum_required < 3.5. FetchContent
+# deps (libarchive 3.7.4, etc.) still declare 2.8.x.
+set(CMAKE_POLICY_VERSION_MINIMUM
+    3.5
+    CACHE STRING "Minimum policy version for old FetchContent projects")
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCOPE)
 
 project(${_name} VERSION ${_version})
