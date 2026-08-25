@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.4 — 2026-08-25
+
+CI: after OBS 30.1.2 builds, `find_package(libobs)` failed because CMake 4.2 dropped the `Development` install component when a second `--component` was passed, and `CMAKE_PREFIX_PATH` was stored as a single `PATH`. Install Development and Windows libs separately; keep the prefix as a list; set `libobs_DIR`.
+
 ## 0.1.3 — 2026-08-25
 
 Windows GitHub Actions stays on **Visual Studio 18 2026** (`windows-2025`). OBS 30.1.2 is configured with `ENABLE_SCRIPTING=OFF` and CMake policy CMP0175 OLD so CMake 4.2 can generate that tree. Compiler warnings are not fatal on CI (`CMAKE_COMPILE_WARNING_AS_ERROR` off).

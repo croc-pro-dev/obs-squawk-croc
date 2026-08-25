@@ -93,25 +93,31 @@ function(_setup_obs_studio)
   message(STATUS "Configure ${label} (${arch}) - done")
 
   message(STATUS "Build ${label} (${arch})")
-  execute_process(
-    COMMAND "${CMAKE_COMMAND}" --build build_${arch} --target obs-frontend-api --config Debug --parallel
-    WORKING_DIRECTORY "${dependencies_dir}/${_obs_destination}"
-    RESULT_VARIABLE _process_result COMMAND_ERROR_IS_FATAL ANY
-    OUTPUT_QUIET)
+  foreach(_obs_cfg IN ITEMS Debug Release)
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" --build build_${arch} --target obs-frontend-api --config ${_obs_cfg} --parallel
+      WORKING_DIRECTORY "${dependencies_dir}/${_obs_destination}"
+      RESULT_VARIABLE _process_result COMMAND_ERROR_IS_FATAL ANY)
+  endforeach()
   message(STATUS "Build ${label} (${arch}) - done")
 
   message(STATUS "Install ${label} (${arch})")
-  if(OS_WINDOWS)
-    set(_cmake_extra "--component obs_libraries")
-  else()
-    set(_cmake_extra "")
-  endif()
-  execute_process(
-    COMMAND "${CMAKE_COMMAND}" --install build_${arch} --component Development --config Debug --prefix
-            "${dependencies_dir}" ${_cmake_extra}
-    WORKING_DIRECTORY "${dependencies_dir}/${_obs_destination}"
-    RESULT_VARIABLE _process_result COMMAND_ERROR_IS_FATAL ANY
-    OUTPUT_QUIET)
+  # CMake 4.2 honours only one --component per invocation. Install Development
+  # (cmake packages) and obs_libraries (Windows import libs) separately.
+  foreach(_obs_cfg IN ITEMS Debug Release)
+    execute_process(
+      COMMAND "${CMAKE_COMMAND}" --install build_${arch} --component Development --config ${_obs_cfg} --prefix
+              "${dependencies_dir}"
+      WORKING_DIRECTORY "${dependencies_dir}/${_obs_destination}"
+      RESULT_VARIABLE _process_result COMMAND_ERROR_IS_FATAL ANY)
+    if(OS_WINDOWS)
+      execute_process(
+        COMMAND "${CMAKE_COMMAND}" --install build_${arch} --component obs_libraries --config ${_obs_cfg} --prefix
+                "${dependencies_dir}"
+        WORKING_DIRECTORY "${dependencies_dir}/${_obs_destination}"
+        RESULT_VARIABLE _process_result)
+    endif()
+  endforeach()
   message(STATUS "Install ${label} (${arch}) - done")
 endfunction()
 
@@ -241,9 +247,52 @@ function(_check_dependencies)
 
   list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
 
-  # cmake-format: off
-  set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} CACHE PATH "CMake prefix search path" FORCE)
-  # cmake-format: on
+  # STRING, not PATH: PATH cache entries cannot hold a ;-separated prefix list.
+  set(CMAKE_PREFIX_PATH
+      "${CMAKE_PREFIX_PATH}"
+      CACHE STRING "CMake prefix search path" FORCE)
 
   _setup_obs_studio()
+
+  list(INSERT CMAKE_PREFIX_PATH 0 "${dependencies_dir}")
+  list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+  set(CMAKE_PREFIX_PATH
+      "${CMAKE_PREFIX_PATH}"
+      CACHE STRING "CMake prefix search path" FORCE)
+
+  unset(_libobs_config)
+  foreach(_candidate IN ITEMS
+          "${dependencies_dir}/lib/cmake/libobs/libobsConfig.cmake"
+          "${dependencies_dir}/cmake/libobs/libobsConfig.cmake"
+          "${dependencies_dir}/libobs/libobsConfig.cmake")
+    if(EXISTS "${_candidate}")
+      set(_libobs_config "${_candidate}")
+      break()
+    endif()
+  endforeach()
+  if(NOT _libobs_config)
+    file(GLOB_RECURSE _libobs_hits "${dependencies_dir}/*/libobsConfig.cmake")
+    if(_libobs_hits)
+      list(GET _libobs_hits 0 _libobs_config)
+    endif()
+  endif()
+  if(NOT _libobs_config)
+    message(FATAL_ERROR "OBS installed to ${dependencies_dir} but libobsConfig.cmake was not found")
+  endif()
+  get_filename_component(_libobs_dir "${_libobs_config}" DIRECTORY)
+  set(libobs_DIR
+      "${_libobs_dir}"
+      CACHE PATH "libobs CMake package" FORCE)
+  message(STATUS "libobs CMake package: ${libobs_DIR}")
+
+  get_filename_component(_obs_api_dir "${_libobs_dir}/../obs-frontend-api" ABSOLUTE)
+  if(EXISTS "${_libobs_dir}/obs-frontend-apiConfig.cmake")
+    set(obs-frontend-api_DIR
+        "${_libobs_dir}"
+        CACHE PATH "obs-frontend-api CMake package" FORCE)
+  elseif(EXISTS "${_obs_api_dir}/obs-frontend-apiConfig.cmake")
+    set(obs-frontend-api_DIR
+        "${_obs_api_dir}"
+        CACHE PATH "obs-frontend-api CMake package" FORCE)
+  endif()
 endfunction()
