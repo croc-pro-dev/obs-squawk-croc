@@ -300,16 +300,31 @@ function(_check_dependencies)
       CACHE PATH "libobs CMake package" FORCE)
   message(STATUS "libobs CMake package: ${libobs_DIR}")
 
+  # OBS 30.1.2 writes Config files flat into ${prefix}/cmake/. CMake 4.2 does
+  # not find that layout via CMAKE_PREFIX_PATH; *_DIR is required (libobs_DIR
+  # already proved that). libobsConfig.cmake then find_dependency(w32-pthreads).
+  foreach(_pkg IN ITEMS w32-pthreads obs-frontend-api)
+    if(EXISTS "${_libobs_dir}/${_pkg}Config.cmake")
+      set(${_pkg}_DIR
+          "${_libobs_dir}"
+          CACHE PATH "${_pkg} CMake package" FORCE)
+      message(STATUS "${_pkg} CMake package: ${${_pkg}_DIR}")
+    endif()
+  endforeach()
+  if(NOT w32-pthreads_DIR AND EXISTS "${_obs_build}/deps/w32-pthreads/w32-pthreadsConfig.cmake")
+    set(w32-pthreads_DIR
+        "${_obs_build}/deps/w32-pthreads"
+        CACHE PATH "w32-pthreads CMake package" FORCE)
+    message(STATUS "w32-pthreads CMake package: ${w32-pthreads_DIR}")
+  endif()
+
   get_filename_component(_obs_api_dir "${_libobs_dir}/../obs-frontend-api" ABSOLUTE)
-  if(EXISTS "${_libobs_dir}/obs-frontend-apiConfig.cmake")
-    set(obs-frontend-api_DIR
-        "${_libobs_dir}"
-        CACHE PATH "obs-frontend-api CMake package" FORCE)
-  elseif(EXISTS "${_obs_api_dir}/obs-frontend-apiConfig.cmake")
+  if(NOT obs-frontend-api_DIR AND EXISTS "${_obs_api_dir}/obs-frontend-apiConfig.cmake")
     set(obs-frontend-api_DIR
         "${_obs_api_dir}"
         CACHE PATH "obs-frontend-api CMake package" FORCE)
-  else()
+  endif()
+  if(NOT obs-frontend-api_DIR)
     foreach(_api_candidate IN ITEMS
             "${_obs_build}/UI/obs-frontend-api"
             "${_obs_build}/frontend/api"
