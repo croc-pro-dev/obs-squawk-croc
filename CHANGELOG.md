@@ -2,6 +2,10 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
+## 0.1.8 — 2026-08-25
+
+Windows CI: `find_package(libobs)` and `w32-pthreads` succeed; `find_package(Qt6)` fails because `CMAKE_PREFIX_PATH` never left `_check_dependencies()`. Set `Qt6_DIR` and export the prefix to parent scope. macOS CI: OBS 30.1.2 rejects Xcode 16’s `MacOSX.sdk` path; pass the real SDK and skip that filename regex.
+
 ## 0.1.7 — 2026-08-25
 
 macOS CI: Homebrew ccache 4.11+ removed `run_second_cpp`. Setting that option aborted the job under zsh `ERR_EXIT`. Ignore unknown ccache config keys.

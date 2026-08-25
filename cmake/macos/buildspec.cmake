@@ -21,6 +21,9 @@ function(_check_dependencies_macos)
   set(dependencies_list prebuilt qt6 obs-studio)
 
   _check_dependencies()
+  set(CMAKE_PREFIX_PATH
+      "${CMAKE_PREFIX_PATH}"
+      PARENT_SCOPE)
 
   execute_process(COMMAND "xattr" -r -d com.apple.quarantine "${dependencies_dir}"
                   RESULT_VARIABLE result COMMAND_ERROR_IS_FATAL ANY)

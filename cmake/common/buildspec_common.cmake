@@ -80,6 +80,28 @@ function(_setup_obs_studio)
     set(_cmake_generator "Xcode")
     set(_cmake_arch "-DCMAKE_OSX_ARCHITECTURES:STRING='arm64;x86_64'")
     list(APPEND _cmake_extra "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    # OBS 30.1.2 parses CMAKE_OSX_SYSROOT for "MacOSX14.2.sdk". Xcode 16
+    # exposes "MacOSX.sdk" (no version), so the regex gets an empty string
+    # and aborts. Point at the real SDK and skip that filename check.
+    execute_process(
+      COMMAND xcrun --sdk macosx --show-sdk-path
+      OUTPUT_VARIABLE _obs_sdk_path
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _obs_sdk_result)
+    if(_obs_sdk_result EQUAL 0 AND _obs_sdk_path)
+      get_filename_component(_obs_sdk_path "${_obs_sdk_path}" REALPATH)
+      list(APPEND _cmake_extra "-DCMAKE_OSX_SYSROOT=${_obs_sdk_path}")
+    endif()
+    set(_obs_cc "${dependencies_dir}/${_obs_destination}/cmake/macos/compilerconfig.cmake")
+    if(EXISTS "${_obs_cc}")
+      file(READ "${_obs_cc}" _obs_cc_src)
+      string(REGEX REPLACE
+             "string\\(REGEX MATCH[^\n]*CMAKE_OSX_SYSROOT\\)\r?\n[ \t]*set\\(_obs_macos_current_sdk \\$\\{CMAKE_MATCH_1\\}\\)"
+             "set(_obs_macos_current_sdk 15.5)"
+             _obs_cc_src
+             "${_obs_cc_src}")
+      file(WRITE "${_obs_cc}" "${_obs_cc_src}")
+    endif()
   endif()
 
   message(STATUS "Configure ${label} (${arch})")
@@ -274,8 +296,11 @@ function(_check_dependencies)
       "${CMAKE_PREFIX_PATH}"
       CACHE STRING "CMake prefix search path" FORCE)
 
+  # OBS 30.1.2 installs Config files *flat* into ${prefix}/cmake/, not
+  # cmake/<pkg>/. Prefer that install over the nested build tree.
   unset(_libobs_config)
   foreach(_candidate IN ITEMS
+          "${dependencies_dir}/cmake/libobsConfig.cmake"
           "${dependencies_dir}/cmake/libobs/libobsConfig.cmake"
           "${dependencies_dir}/lib/cmake/libobs/libobsConfig.cmake"
           "${_obs_build}/libobs/libobsConfig.cmake"
@@ -300,41 +325,72 @@ function(_check_dependencies)
       CACHE PATH "libobs CMake package" FORCE)
   message(STATUS "libobs CMake package: ${libobs_DIR}")
 
-  # OBS 30.1.2 writes Config files flat into ${prefix}/cmake/. CMake 4.2 does
-  # not find that layout via CMAKE_PREFIX_PATH; *_DIR is required (libobs_DIR
-  # already proved that). libobsConfig.cmake then find_dependency(w32-pthreads).
-  foreach(_pkg IN ITEMS w32-pthreads obs-frontend-api)
-    if(EXISTS "${_libobs_dir}/${_pkg}Config.cmake")
-      set(${_pkg}_DIR
-          "${_libobs_dir}"
-          CACHE PATH "${_pkg} CMake package" FORCE)
-      message(STATUS "${_pkg} CMake package: ${${_pkg}_DIR}")
+  # Do not use if(NOT w32-pthreads_DIR): CMake parses the hyphen as subtraction.
+  unset(_w32_config)
+  foreach(_candidate IN ITEMS
+          "${dependencies_dir}/cmake/w32-pthreadsConfig.cmake"
+          "${_libobs_dir}/w32-pthreadsConfig.cmake"
+          "${_obs_build}/deps/w32-pthreads/w32-pthreadsConfig.cmake")
+    if(EXISTS "${_candidate}")
+      set(_w32_config "${_candidate}")
+      break()
     endif()
   endforeach()
-  if(NOT w32-pthreads_DIR AND EXISTS "${_obs_build}/deps/w32-pthreads/w32-pthreadsConfig.cmake")
-    set(w32-pthreads_DIR
-        "${_obs_build}/deps/w32-pthreads"
+  if(NOT _w32_config)
+    file(GLOB_RECURSE _w32_hits "${dependencies_dir}/*/w32-pthreadsConfig.cmake")
+    if(_w32_hits)
+      list(GET _w32_hits 0 _w32_config)
+    endif()
+  endif()
+  if(_w32_config)
+    get_filename_component(_w32_dir "${_w32_config}" DIRECTORY)
+    set("w32-pthreads_DIR"
+        "${_w32_dir}"
         CACHE PATH "w32-pthreads CMake package" FORCE)
-    message(STATUS "w32-pthreads CMake package: ${w32-pthreads_DIR}")
+    message(STATUS "w32-pthreads CMake package: ${_w32_dir}")
+  elseif(OS_WINDOWS)
+    message(FATAL_ERROR "w32-pthreadsConfig.cmake was not found under ${dependencies_dir}")
   endif()
 
-  get_filename_component(_obs_api_dir "${_libobs_dir}/../obs-frontend-api" ABSOLUTE)
-  if(NOT obs-frontend-api_DIR AND EXISTS "${_obs_api_dir}/obs-frontend-apiConfig.cmake")
+  unset(_api_config)
+  foreach(_candidate IN ITEMS
+          "${dependencies_dir}/cmake/obs-frontend-api/obs-frontend-apiConfig.cmake"
+          "${dependencies_dir}/cmake/obs-frontend-apiConfig.cmake"
+          "${_libobs_dir}/obs-frontend-apiConfig.cmake"
+          "${_obs_build}/UI/obs-frontend-api/obs-frontend-apiConfig.cmake"
+          "${_obs_build}/frontend/api/obs-frontend-apiConfig.cmake")
+    if(EXISTS "${_candidate}")
+      set(_api_config "${_candidate}")
+      break()
+    endif()
+  endforeach()
+  if(_api_config)
+    get_filename_component(_api_dir "${_api_config}" DIRECTORY)
     set(obs-frontend-api_DIR
-        "${_obs_api_dir}"
+        "${_api_dir}"
         CACHE PATH "obs-frontend-api CMake package" FORCE)
+    message(STATUS "obs-frontend-api CMake package: ${obs-frontend-api_DIR}")
   endif()
-  if(NOT obs-frontend-api_DIR)
-    foreach(_api_candidate IN ITEMS
-            "${_obs_build}/UI/obs-frontend-api"
-            "${_obs_build}/frontend/api"
-            "${dependencies_dir}/cmake/obs-frontend-api")
-      if(EXISTS "${_api_candidate}/obs-frontend-apiConfig.cmake")
-        set(obs-frontend-api_DIR
-            "${_api_candidate}"
-            CACHE PATH "obs-frontend-api CMake package" FORCE)
-        break()
-      endif()
-    endforeach()
+
+  # CMAKE_PREFIX_PATH is updated inside this function. CACHE FORCE is not
+  # enough: a directory-scope CMAKE_PREFIX_PATH can shadow it, so Qt6 from
+  # obs-deps is invisible at CMakeLists.txt find_package(Qt6).
+  file(GLOB _qt6_configs "${dependencies_dir}/obs-deps-qt6-*/lib/cmake/Qt6/Qt6Config.cmake")
+  if(_qt6_configs)
+    list(GET _qt6_configs 0 _qt6_config)
+    get_filename_component(_qt6_dir "${_qt6_config}" DIRECTORY)
+    get_filename_component(_qt6_prefix "${_qt6_dir}/../../.." ABSOLUTE)
+    list(INSERT CMAKE_PREFIX_PATH 0 "${_qt6_prefix}")
+    set(Qt6_DIR
+        "${_qt6_dir}"
+        CACHE PATH "Qt6 CMake package" FORCE)
+    message(STATUS "Qt6 CMake package: ${Qt6_DIR}")
   endif()
+  list(REMOVE_DUPLICATES CMAKE_PREFIX_PATH)
+  set(CMAKE_PREFIX_PATH
+      "${CMAKE_PREFIX_PATH}"
+      CACHE STRING "CMake prefix search path" FORCE)
+  set(CMAKE_PREFIX_PATH
+      "${CMAKE_PREFIX_PATH}"
+      PARENT_SCOPE)
 endfunction()
