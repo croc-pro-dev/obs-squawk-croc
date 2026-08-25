@@ -82,11 +82,9 @@ Owner-only commands (the line must come from the owner name):
 
 ## Installation
 
-1. Download the latest release from this repo’s [Releases](https://github.com/croc-pro-dev/obs-squawk-croc/releases) page, or build from source (see [Building](#building)).
-2. Run the installer, or copy the plugin files into your OBS plugins directory.
+1. Download the latest Windows zip from this repo’s [Releases](https://github.com/croc-pro-dev/obs-squawk-croc/releases) page, or build from source (see [Building](#building)).
+2. Unzip into your OBS Studio folder (typically `C:\Program Files\obs-studio\`), or copy `obs-squawk.dll` and its dependent DLLs into `obs-plugins\64bit`.
 3. Restart OBS.
-
-If no release asset is published yet, build with the Windows instructions below and copy `obs-squawk.dll` plus its dependent DLLs into OBS.
 
 ## Usage
 
@@ -139,10 +137,30 @@ The plugin lists the [sherpa-onnx TTS models](https://github.com/k2-fsa/sherpa-o
 
 ### Windows (this fork)
 
-This fork is built with Visual Studio 18 2026, Qt 6, vcpkg, and a local OBS Studio tree.
+This fork is built with **Visual Studio 18 2026**, Qt 6, vcpkg, and a local OBS Studio tree. CMake does not hardcode those paths: pass them as `CMAKE_PREFIX_PATH` (and vcpkg’s toolchain file). Optional env/cache variables `OBS_STUDIO_DIR` and `OBS_DEPS_DIR` fill in Qt, SIMDe finders, and `w32-pthreads` from the same tree.
+
+From **Developer PowerShell for VS**:
 
 ```powershell
-cmake --preset windows-x64
+cd C:\dev\obs-squawk-croc
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+
+cmake -B build -S . -G "Visual Studio 18 2026" -A x64 `
+  -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+  -DCMAKE_PREFIX_PATH="C:/dev/obs-studio/build;C:/dev/obs-deps" `
+  -Dw32-pthreads_DIR="C:/dev/obs-studio/build/deps/w32-pthreads"
+
+cmake --build build --config Release
+```
+
+Copy `build\Release\obs-squawk.dll` (and `obs-squawk.pdb` if you want symbols) plus the runtime DLLs sitting next to it (`archive.dll`, `bz2.dll`, `libcrypto-3-x64.dll`, `liblzma.dll`, `lz4.dll`, `z.dll`, `zstd.dll`) into `C:\Program Files\obs-studio\obs-plugins\64bit`. Also copy sherpa-onnx / ONNX Runtime DLLs from `build\_deps\sherpa-onnx-build-src\lib` into that same folder, and `bz2.dll` / `bzip2.dll` from your vcpkg `bin` directory if they are not already in `build\Release`.
+
+Equivalent env-based configure (same generator):
+
+```powershell
+$env:OBS_STUDIO_DIR = "C:\dev\obs-studio"
+$env:OBS_DEPS_DIR = "C:\dev\obs-deps"
+cmake --preset windows-x64 -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 cmake --build --preset windows-x64
 ```
 
@@ -151,16 +169,6 @@ The original helper script still exists:
 ```powershell
 .github/scripts/Build-Windows.ps1 -Configuration Release
 ```
-
-Install by copying the built plugin into OBS, for example:
-
-```powershell
-Copy-Item -Recurse -Force "release\Release\*" -Destination "C:\Program Files\obs-studio\"
-```
-
-If you built into `build\Release`, copy `obs-squawk.dll` and the required runtime DLLs (`archive.dll`, `bz2.dll`, `libcrypto-3-x64.dll`, `liblzma.dll`, `lz4.dll`, `z.dll`, `zstd.dll`, plus sherpa-onnx / ONNX Runtime DLLs from the build tree) into the OBS `obs-plugins\64bit` folder, and copy `data\` into the matching OBS plugin data path.
-
-`CMakeLists.txt` / `CMakePresets.json` currently contain machine-local OBS and Qt paths (`C:/dev/obs-studio`, `VCPKG_ROOT`). Adjust those for your machine before configuring.
 
 ### Mac OSX
 

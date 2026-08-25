@@ -2,9 +2,15 @@
 
 All notable changes in **obs-squawk-croc** relative to the original [obs-squawk](https://github.com/royshil/obs-squawk) plugin.
 
-The local clone was compared with [github.com/croc-pro-dev/obs-squawk-croc](https://github.com/croc-pro-dev/obs-squawk-croc) at commit `3b6ec2f`. Tracked source, CMake, and the previous README match that GitHub `master` tree. There were no unpublished source diffs to add. Untracked local-only files (`vcpkg.json`, `SIMDeConfig.cmake`, `master`, build outputs) are machine build helpers/artifacts, not plugin features.
+## 0.1.0 — 2026-08-25
 
-## Unreleased
+First GitHub release of this fork.
+
+### Build
+
+- Removed hardcoded `C:/dev/obs-studio` and `C:/dev/obs-deps` CMake paths. Local OBS is found through `CMAKE_PREFIX_PATH`, optional `OBS_STUDIO_DIR` / `OBS_DEPS_DIR`, and `w32-pthreads_DIR`.
+- Windows generator stays **Visual Studio 18 2026**. GitHub Actions Windows job uses `windows-2025`.
+- LibArchive comes from vcpkg when a toolchain file provides it, otherwise from the original FetchContent helper.
 
 ### Documentation
 

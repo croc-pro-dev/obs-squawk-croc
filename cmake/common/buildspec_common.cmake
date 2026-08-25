@@ -108,8 +108,35 @@ function(_setup_obs_studio)
   message(STATUS "Install ${label} (${arch}) - done")
 endfunction()
 
+# _obs_is_already_provided: True when a local OBS build is on the prefix path
+function(_obs_is_already_provided out_var)
+  if(OBS_STUDIO_DIR OR libobs_DIR)
+    set(${out_var}
+        TRUE
+        PARENT_SCOPE)
+    return()
+  endif()
+  foreach(_path IN LISTS CMAKE_PREFIX_PATH)
+    if(EXISTS "${_path}/libobs/libobsConfig.cmake" OR EXISTS "${_path}/libobsConfig.cmake")
+      set(${out_var}
+          TRUE
+          PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+  set(${out_var}
+      FALSE
+      PARENT_SCOPE)
+endfunction()
+
 # _check_dependencies: Fetch and extract pre-built OBS build dependencies
 function(_check_dependencies)
+  _obs_is_already_provided(_obs_already_provided)
+  if(_obs_already_provided)
+    message(STATUS "libobs already provided via CMAKE_PREFIX_PATH / OBS_STUDIO_DIR; skipping OBS dependency download")
+    return()
+  endif()
+
   if(NOT buildspec)
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/buildspec.json" buildspec)
   endif()
